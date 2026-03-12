@@ -3,7 +3,10 @@ project(HttpParserTests LANGUAGES C)
 add_executable(HttpParserTests src/test.c)
 target_link_libraries(HttpParserTests PRIVATE HttpParser)
 
-target_compile_options(HttpParserTests PRIVATE -Wno-incompatible-pointer-types)
+target_compile_options(HttpParserTests PRIVATE
+    -Wall
+    -Wno-incompatible-pointer-types
+)
 
 add_test(
   NAME HttpParserTests

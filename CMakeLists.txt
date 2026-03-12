@@ -7,14 +7,17 @@ project(HttpParser
 
 include(CTest)
 
-
 add_library(HttpParser SHARED
     src/picohttpparser.h
     src/picohttpparser.c
     src/lib.c
     src/pathparser.h
     src/pathparser.c
-    )
+)
+
+set_target_properties(HttpParser PROPERTIES
+    OUTPUT_NAME "httpparser"
+)
 
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     add_subdirectory(HttpParserTests)
@@ -22,71 +25,111 @@ endif ()
 
 enable_testing()
 
-set_target_properties(HttpParser PROPERTIES
-    OUTPUT_NAME "http_parser")
+target_compile_options(HttpParser PRIVATE
+    -Wall
+    -Wno-incompatible-pointer-types
+)
 
-add_compile_options(-Wall -fsanitize=address,undefined)
-target_compile_options(HttpParser PRIVATE -Wno-incompatible-pointer-types)
+#
+# Find Tcl (works with Tcl 8.6, 8.7 and 9)
+#
+find_package(TCL REQUIRED COMPONENTS Tcl)
 
- # CMake knows how to find TCL
-find_package(TCL)
-find_package(TclStub)
-add_compile_definitions(USE_TCL_STUBS)
+#
+# Enable stubs (required for extensions)
+#
+target_compile_definitions(HttpParser PRIVATE USE_TCL_STUBS)
 
-find_path(TCL_INCLUDE_DIR tcl.h REQUIRED
-    HINTS
-    ${CMAKE_SOURCE_DIR}/../tcl/generic
-    ${CMAKE_SOURCE_DIR}/../tcl86/generic
-    ${CMAKE_SOURCE_DIR}/../tcl87/generic
-    /usr/local/tcl86/include /usr/local/tcl87/include /usr/include/tcl8.6)
+#
+# Include directories
+#
+target_include_directories(HttpParser PRIVATE
+    ${TCL_INCLUDE_PATH}
+)
 
-target_include_directories(HttpParser
-  PRIVATE
-  "${CMAKE_CURRENT_BINARY_DIR}"
-  "${TCL_INCLUDE_PATH}"
-  "${CMAKE_SOURCE_DIR}/include")
+#
+# Find stub library dynamically
+#
+find_library(TCL_STUB_LIBRARY
+    NAMES
+        tclstub
+        tclstub9.0
+        tclstub8.7
+        tclstub8.6
+    PATHS
+        ${TCL_LIBRARY_PATH}
+        /usr/lib
+        /usr/lib64
+        /usr/local/lib
+)
 
-target_link_libraries(HttpParser
-    PRIVATE
-    ${TCL_STUB_LIBRARY})
+if(NOT TCL_STUB_LIBRARY)
+    message(FATAL_ERROR "Tcl stub library not found")
+endif()
 
+target_link_libraries(HttpParser PRIVATE ${TCL_STUB_LIBRARY})
+
+#
 # Copy TCL package index
-add_custom_target(copy_pkg_index SOURCES
-    "http_parser/pkgIndex.tcl"
-    COMMAND
-    ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/http_parser
-        ${CMAKE_CURRENT_BINARY_DIR}/http_parser)
+#
+add_custom_target(copy_pkg_index
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/httpparser
+        ${CMAKE_CURRENT_BINARY_DIR}/httpparser
+    SOURCES httpparser/pkgIndex.tcl
+)
 
-# Copy test folder to binary directory
-add_custom_target(copy_tcl_tests SOURCES
-    "tests/all.tcl"
-    "tests/parser.test"
-    "tests/server.test"
-    COMMAND
-    ${CMAKE_COMMAND} -E copy_directory
+#
+# Copy test folder
+#
+add_custom_target(copy_tcl_tests
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
-        ${CMAKE_CURRENT_BINARY_DIR}/tests)
+        ${CMAKE_CURRENT_BINARY_DIR}/tests
+    SOURCES
+        tests/all.tcl
+        tests/parser.test
+        tests/server.test
+)
 
-# Copy examples folder to binary directory
-add_custom_target(copy_examples SOURCES
-    "examples/http_server.tcl"
-    COMMAND
-    ${CMAKE_COMMAND} -E copy_directory
+#
+# Copy examples
+#
+add_custom_target(copy_examples
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/examples
-        ${CMAKE_CURRENT_BINARY_DIR}/examples)
+        ${CMAKE_CURRENT_BINARY_DIR}/examples
+    SOURCES
+        examples/http_server.tcl
+)
 
-add_dependencies(HttpParser copy_pkg_index copy_tcl_tests copy_examples)
+add_dependencies(HttpParser
+    copy_pkg_index
+    copy_tcl_tests
+    copy_examples
+)
 
-# copy dll into http_parser package directory
+#
+# Copy built library into Tcl package directory
+#
 add_custom_command(TARGET HttpParser POST_BUILD
-    COMMAND
-    ${CMAKE_COMMAND} -E copy
+    COMMAND ${CMAKE_COMMAND} -E copy
         $<TARGET_FILE:HttpParser>
-        ${CMAKE_CURRENT_BINARY_DIR}/http_parser)
+        ${CMAKE_CURRENT_BINARY_DIR}/httpparser
+)
 
-#add_custom_target(
-#  TclTest ALL
-#  COMMAND ls -la && cd tests && tclsh all.tcl
-#  COMMENT "run TCL tests")
 
+execute_process(
+    COMMAND sh -c "echo 'puts \$tcl_library' | ${TCL_TCLSH}"
+    OUTPUT_VARIABLE TCL_PACKAGE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+install(TARGETS HttpParser
+    LIBRARY DESTINATION ${TCL_PACKAGE_DIR}/httpparser
+)
+
+install(FILES
+    httpparser/pkgIndex.tcl
+    DESTINATION ${TCL_PACKAGE_DIR}/httpparser
+)

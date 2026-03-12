@@ -12,14 +12,14 @@
 #define HEADERS_SIZE 100
 
 int
-http_parser_parse_request(ClientData data, Tcl_Interp *interp, int objc, Tcl_Obj * const objv[]);
+httpparser_parse_request(ClientData data, Tcl_Interp *interp, int objc, Tcl_Obj * const objv[]);
 int
-http_parser_parse_buffer(Tcl_Interp *interp, char *buf, int buf_len);
+httpparser_parse_buffer(Tcl_Interp *interp, char *buf, int buf_len);
 int
-http_parser_parse_channel(Tcl_Interp *interp, char *channelName);
+httpparser_parse_channel(Tcl_Interp *interp, char *channelName);
 
 int
-Http_parser_Init(Tcl_Interp *interp)
+Httpparser_Init(Tcl_Interp *interp)
 {
     Tcl_Namespace *nsPtr;
 
@@ -27,17 +27,17 @@ Http_parser_Init(Tcl_Interp *interp)
         return TCL_ERROR;
     }
 
-    nsPtr = Tcl_CreateNamespace(interp, "http_parser", NULL, NULL);
+    nsPtr = Tcl_CreateNamespace(interp, "httpparser", NULL, NULL);
 
     if(nsPtr == NULL) {
         return TCL_ERROR;
     }
 
-    Tcl_CreateObjCommand(interp, "http_parser::parse", http_parser_parse_request, NULL, NULL);
+    Tcl_CreateObjCommand(interp, "httpparser::parse", httpparser_parse_request, NULL, NULL);
 
     Tcl_Export(interp, nsPtr, "parse", 0);
 
-    if(Tcl_PkgProvide(interp, "http_parser", "0.1") == TCL_ERROR) {
+    if(Tcl_PkgProvide(interp, "httpparser", "0.1") == TCL_ERROR) {
         return TCL_ERROR;
     }
 
@@ -46,7 +46,7 @@ Http_parser_Init(Tcl_Interp *interp)
 
 
 /**
- * @brief http_parser_parse_request
+ * @brief httpparser_parse_request
  * Extract channel content and try parse content by pico http parser. Return a dict with keys:
  *  - method: string
  *  - path: string
@@ -60,11 +60,11 @@ Http_parser_Init(Tcl_Interp *interp)
  * @return Success or failure
  */
 int
-http_parser_parse_request(ClientData data, Tcl_Interp *interp, int objc, Tcl_Obj * const objv[])
+httpparser_parse_request(ClientData data, Tcl_Interp *interp, int objc, Tcl_Obj * const objv[])
 {
-    int ret, mode = TCL_READABLE, resultCode = TCL_OK, buf_len;
+    int buf_len;
     char *channelName, *opt, *buf;
-    Tcl_Channel channel;
+    //Tcl_Channel channel;
 
     if(objc != 3) {
         Tcl_WrongNumArgs(interp, 1, objv, "Usage: parse_request -channel ?channel? -buffer ?string?");
@@ -74,11 +74,11 @@ http_parser_parse_request(ClientData data, Tcl_Interp *interp, int objc, Tcl_Obj
     opt = Tcl_GetString(objv[1]);
     if(strcmp(opt, "-channel") == 0) {
         channelName = Tcl_GetString(objv[2]);
-        return http_parser_parse_channel(interp, channelName);
+        return httpparser_parse_channel(interp, channelName);
     } else if(strcmp(opt, "-string") == 0){
         buf = Tcl_GetString(objv[2]);
         buf_len = Tcl_GetCharLength(objv[2]);
-        return http_parser_parse_buffer(interp, buf, buf_len);
+        return httpparser_parse_buffer(interp, buf, buf_len);
     } else {
         Tcl_WrongNumArgs(interp, 1, objv, "Usage: parse_request -channel ?channel? -string ?string?");
         return TCL_ERROR;
@@ -86,7 +86,7 @@ http_parser_parse_request(ClientData data, Tcl_Interp *interp, int objc, Tcl_Obj
 }
 
 int
-http_parser_parse_channel(Tcl_Interp *interp, char *channelName)
+httpparser_parse_channel(Tcl_Interp *interp, char *channelName)
 {
     int ret, mode = TCL_READABLE, resultCode = TCL_OK, buf_len;
     char *buf;
@@ -116,13 +116,13 @@ http_parser_parse_channel(Tcl_Interp *interp, char *channelName)
         return resultCode;
     }
 
-    ret = http_parser_parse_buffer(interp, buf, buf_len);
+    ret = httpparser_parse_buffer(interp, buf, buf_len);
     Tcl_DecrRefCount(objPtr);
     return ret;
 }
 
 int
-http_parser_parse_buffer(Tcl_Interp *interp, char* buf, int buf_len)
+httpparser_parse_buffer(Tcl_Interp *interp, char* buf, int buf_len)
 {
     size_t pret, method_len, fullpath_len, path_len, minor_version, num_headers, num_queries, body_len, frag_len;
     char *method, *fullpath, *path, *body, *frag;

@@ -1,0 +1,1 @@
+package ifneeded httpparser 0.1 [list load [file join $dir libhttpparser[info sharedlibextension]]]

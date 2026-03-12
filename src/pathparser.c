@@ -95,18 +95,17 @@ parse_path(char *fullpath,
     return 0;
 }
 
-void print_queries(struct phr_queries *queries,
-		   size_t *num_queries) {
+void print_queries(struct phr_queries *queries, size_t *num_queries) {
   
     for(int i = 0; i < *num_queries; i++){
-      printf("\nname=");
-      for(int j = 0; j < queries[i].name_len; j++){
-	printf("%c", queries[i].name[j]);
-      }
-      printf(" [%d], value=", queries[i].name_len);
-      for(int j = 0; j < queries[i].value_len; j++){
-	printf("%c", queries[i].value[j]);
-      }
-      printf(" [%d]\n", queries[i].value_len);
+        printf("\nname=");
+        for(int j = 0; j < queries[i].name_len; j++){
+           printf("%c", queries[i].name[j]);
+        }
+        printf(" [%lu], value=", queries[i].name_len);
+        for(int j = 0; j < queries[i].value_len; j++){
+            printf("%c", queries[i].value[j]);
+        }
+        printf(" [%lu]\n", queries[i].value_len);
     }
 }

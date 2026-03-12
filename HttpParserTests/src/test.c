@@ -12,7 +12,7 @@ int assert_int(int expected, int value, char *message) {
     return 0;
 }
 
-int assert_char_ptr(char *expected, char *ptr, int len, char *message) {
+int assert_char_ptr(const char *expected, const char *ptr, int len, char *message) {
     char buf[len];
     memset(buf, 0, len);
     memcpy(buf, ptr, len);
@@ -33,6 +33,8 @@ int main() {
     printf("run parse\n");
     ret = parse_path(fullpath, fullpath_len, &path, &path_len, &frag, &frag_len, queries, &num_queries);
 
+
+    if(assert_int(0, ret, "wrong parse_path return")) return 1;
 
     if(assert_int(5, path_len, "wrong path len")) return 1;
     if(assert_char_ptr("/home", path, path_len, "wong path")) return 1;
